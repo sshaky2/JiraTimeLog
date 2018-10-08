@@ -6,6 +6,9 @@ from dateutil.relativedelta import relativedelta
 import argparse
 import sys
 import getpass
+from calendar import monthrange
+import math
+import random
 
 parser = argparse.ArgumentParser(description='Jira time log.')
 parser.add_argument('--startdate', type=datetime, default=datetime.today().replace(day=1).date(), help= 'Date in format yyyy-mm-dd')
@@ -50,19 +53,30 @@ def LogTime(projects):
                     for item in history.items:
                         if item.field == 'assignee' and str(item.fromString) == displayName \
                                 and dateutil.parser.parse(ticket.fields.resolutiondate).date() >= first_day:
-                            tickets_assigned.append({ticket.key: str(dateutil.parser.parse(history.created).date())})
+                            tickets_assigned.append((ticket.key, str(dateutil.parser.parse(history.created).date()),
+                                                     str(dateutil.parser.parse(ticket.fields.resolutiondate).date())))
                             break
 
-            if str(ticket.fields.status) != 'Done':
+            if str(ticket.fields.status) != 'Done' and str(ticket.fields.status) != 'TODO':
                 if (str(ticket.fields.assignee) == displayName):
                     updated_date = dateutil.parser.parse(ticket.fields.updated).date()
                     if (updated_date < first_day):
                         updated_date = first_day
-                    tickets_assigned.append({ticket.key: str(updated_date)})
+                    tickets_assigned.append((ticket.key, str(updated_date), datetime.today().date()))
 
 
     return tickets_assigned
 
+def InterPolateTime(tickets_assigned):
+    log_table = {}
+    for issue in tickets_assigned:
+        for day in range(int(dateutil.parser.parse(str(issue[1])).day), int(dateutil.parser.parse(str(issue[2])).day) + 1):
+            if day not in log_table.keys():
+                log_table[day] = [issue[0]]
+            else:
+                log_table[day].append(issue[0])
+
+    return log_table
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -77,6 +91,7 @@ if __name__ == "__main__":
     startDate = args.startdate
     server = args.server
     projectNames = [proj for proj in args.projectkey.split(',') if proj != '']
+    time_interpolation = args.timeinterpolation
 
     server = {'server': server}
     jira = JIRA(options=server, basic_auth=(user, password))
@@ -94,15 +109,43 @@ if __name__ == "__main__":
     if(len(tickets_assigned) < 1):
         print("No ticket found.")
         sys.exit(1)
+
+
+
     print('Tickets logged:')
-    for item in tickets_assigned:
-        for k, v in item.items():
-            ticket = jira.issue(k)
+    if time_interpolation is not True:
+        for item in tickets_assigned:
+            ticket = jira.issue(item[0])
             print(f'{ticket.key}: {ticket.fields.summary}')
             try:
                 jira.add_worklog(ticket, timeSpent='8h', comment=ticket.fields.summary,
-                             started=dateutil.parser.parse(v).date() + dt.timedelta(days=1))
+                             started=dateutil.parser.parse(item[1]).date() + dt.timedelta(days=1))
             except:
                 print("You do not have the permission to associate a worklog to this issue.")
-
+    else:
+        print('Time interpolation')
+        logged_time = InterPolateTime(tickets_assigned)
+        days_logged = logged_time.keys
+        for day in range(1, monthrange(datetime.today().year, datetime.today().month)[1] + 1):
+            if day in logged_time.keys():
+                time_spent = str(math.ceil(8/len(logged_time[day])))
+                for issue in logged_time[day]:
+                    ticket = jira.issue(issue)
+                    print(f'{ticket.key}: {ticket.fields.summary}')
+                    try:
+                        jira.add_worklog(ticket, timeSpent=f'{time_spent}h', comment=ticket.fields.summary,
+                                         started=datetime.today().replace(day=day).date() + dt.timedelta(days=1))
+                    except:
+                        print("You do not have the permission to associate a worklog to this issue.")
+            else:
+                closest_day = min(logged_time.keys(), key=lambda x:abs(x-day))
+                rand = random.randint(0, len(logged_time[closest_day]) - 1)
+                issue = logged_time[closest_day][rand]
+                ticket = jira.issue(issue)
+                print(f'{ticket.key}: {ticket.fields.summary}')
+                try:
+                    jira.add_worklog(ticket, timeSpent='8h', comment=ticket.fields.summary,
+                                     started=datetime.today().replace(day=day).date() + dt.timedelta(days=1))
+                except:
+                    print("You do not have the permission to associate a worklog to this issue.")
     print("Done logging time.")
