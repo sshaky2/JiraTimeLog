@@ -59,10 +59,15 @@ def LogTime(projects):
 
             if str(ticket.fields.status) != 'Done' and str(ticket.fields.status) != 'TODO':
                 if (str(ticket.fields.assignee) == displayName):
-                    updated_date = dateutil.parser.parse(ticket.fields.updated).date()
-                    if (updated_date < first_day):
-                        updated_date = first_day
-                    tickets_assigned.append((ticket.key, str(updated_date), datetime.today().date()))
+                    created_date = None
+                    for history in ticket.changelog.histories:
+                        for item in history.items:
+                            if item.field == 'assignee':
+                                created_date = dateutil.parser.parse(history.created).date()
+                    #updated_date = dateutil.parser.parse(ticket.fields.updated).date()
+                    if (created_date < first_day):
+                        created_date = first_day
+                    tickets_assigned.append((ticket.key, str(created_date), datetime.today().date()))
 
 
     return tickets_assigned
@@ -123,15 +128,14 @@ if __name__ == "__main__":
             except:
                 print("You do not have the permission to associate a worklog to this issue.")
     else:
-        print('Time interpolation')
         logged_time = InterPolateTime(tickets_assigned)
-        days_logged = logged_time.keys
-        for day in range(1, monthrange(datetime.today().year, datetime.today().month)[1] + 1):
+        days_logged = [x for x in range(1, datetime.today().day + 1) if datetime.today().replace(day=x).weekday() < 5 ]
+        for day in days_logged:
             if day in logged_time.keys():
                 time_spent = str(math.ceil(8/len(logged_time[day])))
                 for issue in logged_time[day]:
                     ticket = jira.issue(issue)
-                    print(f'{ticket.key}: {ticket.fields.summary}')
+                    print(f'{ticket.key}: {ticket.fields.summary} logged at {datetime.today().replace(day=day).date()}')
                     try:
                         jira.add_worklog(ticket, timeSpent=f'{time_spent}h', comment=ticket.fields.summary,
                                          started=datetime.today().replace(day=day).date() + dt.timedelta(days=1))
@@ -142,7 +146,7 @@ if __name__ == "__main__":
                 rand = random.randint(0, len(logged_time[closest_day]) - 1)
                 issue = logged_time[closest_day][rand]
                 ticket = jira.issue(issue)
-                print(f'{ticket.key}: {ticket.fields.summary}')
+                print(f'{ticket.key}: {ticket.fields.summary} logged at {datetime.today().replace(day=day).date()}')
                 try:
                     jira.add_worklog(ticket, timeSpent='8h', comment=ticket.fields.summary,
                                      started=datetime.today().replace(day=day).date() + dt.timedelta(days=1))
