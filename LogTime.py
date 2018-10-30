@@ -47,7 +47,6 @@ def LogTime(projects):
             proj = "\'INT\'"
         relevant_issues = ListAllIssues(str(proj),f"project= {str(proj)} and updated >= {str(prev_month)}")
 
-        resolved_tickets = [ticket for ticket in relevant_issues if ticket.fields.resolutiondate != None]
         for ticket in relevant_issues:
 
             if (ticket.fields.resolutiondate != None):
@@ -97,11 +96,12 @@ def InterPolateTime(tickets_assigned):
     return log_table
 
 def LogWork(jira, ticket, hours, date):
-    try:
-        jira.add_worklog(ticket, timeSpent=f'{hours}h', comment=ticket.fields.summary,
-                         started=date)
-    except:
-        print("You do not have the permission to associate a worklog to this issue.")
+    a = 2
+    # try:
+    #     # jira.add_worklog(ticket, timeSpent=f'{hours}h', comment=ticket.fields.summary,
+    #     #                  started=date)
+    # except:
+    #     print("You do not have the permission to associate a worklog to this issue.")
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -141,14 +141,14 @@ if __name__ == "__main__":
     logged_time = InterPolateTime(tickets_assigned)
     days_logged = [x for x in range(1, datetime.today().day + 1) if datetime.today().replace(day=x).weekday() < 5 ]
     if management_hours is True:
-        hours_per_day = hours_per_day/2
+        hours_to_log = str(int(float(hours_per_day))/2)
         ticket = jira.issue('ADM-203')
         print(f'Logging {ticket.key}: {ticket.fields.summary}')
         for day in days_logged:
-            LogWork(jira, ticket, str(hours_per_day), datetime.today().replace(day=day).date() + dt.timedelta(days=1))
+            LogWork(jira, ticket, str(hours_to_log), datetime.today().replace(day=day).date() + dt.timedelta(days=1))
     for day in days_logged:
         if day in logged_time.keys():
-            time_spent = str(int(hours_per_day)/len(logged_time[day]))
+            time_spent = str(int(float(hours_per_day))/len(logged_time[day]))
             for issue in logged_time[day]:
                 ticket = jira.issue(issue)
                 print(f'{ticket.key}: {ticket.fields.summary} logged at {datetime.today().replace(day=day).date()}')
