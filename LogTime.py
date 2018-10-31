@@ -48,7 +48,6 @@ def LogTime(projects):
         relevant_issues = ListAllIssues(str(proj),f"project= {str(proj)} and updated >= {str(prev_month)}")
 
         for ticket in relevant_issues:
-
             if (ticket.fields.resolutiondate != None):
                 for history in ticket.changelog.histories:
                     for item in history.items:
@@ -64,7 +63,7 @@ def LogTime(projects):
                     and dateutil.parser.parse(ticket.fields.created).date() > first_day - relativedelta(months=3):
                 if str(ticket.fields.assignee) == displayName:
                     created_date = dateutil.parser.parse(ticket.fields.created).date() \
-                        if dateutil.parser.parse(ticket.fields.created).date() > first_day else first_day.date()
+                        if dateutil.parser.parse(ticket.fields.created).date() > first_day else first_day
                     tickets_assigned.append((ticket.key, created_date, datetime.today().date()))
                     continue
 
@@ -96,12 +95,11 @@ def InterPolateTime(tickets_assigned):
     return log_table
 
 def LogWork(jira, ticket, hours, date):
-    a = 2
-    # try:
-    #     # jira.add_worklog(ticket, timeSpent=f'{hours}h', comment=ticket.fields.summary,
-    #     #                  started=date)
-    # except:
-    #     print("You do not have the permission to associate a worklog to this issue.")
+    try:
+        jira.add_worklog(ticket, timeSpent=f'{hours}h', comment=ticket.fields.summary,
+                         started=date)
+    except:
+        print("You do not have the permission to associate a worklog to this issue.")
 
 if __name__ == "__main__":
     args = parser.parse_args()
