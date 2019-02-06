@@ -61,7 +61,8 @@ def LogTime(projects):
                     and str(ticket.fields.status) != 'Ready for Production' \
                     and str(ticket.fields.status) != 'Ready for Merge'\
                     and dateutil.parser.parse(ticket.fields.created).date() > first_day - relativedelta(months=3):
-                if str(ticket.fields.assignee) == displayName:
+                if str(ticket.fields.assignee) == displayName or \
+                        (issue.fields.customfield_16800 is not None and str(issue.fields.customfield_16800[0]) == displayName):
                     created_date = dateutil.parser.parse(ticket.fields.created).date() \
                         if dateutil.parser.parse(ticket.fields.created).date() > first_day else first_day
                     tickets_assigned.append((ticket.key, created_date, datetime.today().date()))
