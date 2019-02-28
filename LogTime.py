@@ -61,8 +61,12 @@ def LogTime(projects):
                     and str(ticket.fields.status) != 'Ready for Production' \
                     and str(ticket.fields.status) != 'Ready for Merge'\
                     and dateutil.parser.parse(ticket.fields.created).date() > first_day - relativedelta(months=3):
-                if str(ticket.fields.assignee) == displayName or \
-                        (issue.fields.customfield_16800 is not None and str(issue.fields.customfield_16800[0]) == displayName): #this is for pairing with
+                pairing_ticket = jira.issue(ticket.key)
+                pairing_name = ''
+                if hasattr(pairing_ticket.fields, 'customfield_16800'):
+                    if pairing_ticket.fields.customfield_16800 is not None:
+                        pairing_name = str(pairing_ticket.fields.customfield_16800[0])
+                if str(ticket.fields.assignee) == displayName or pairing_name == displayName: #this is for pairing with
                     created_date = dateutil.parser.parse(ticket.fields.created).date() \
                         if dateutil.parser.parse(ticket.fields.created).date() > first_day else first_day
                     tickets_assigned.append((ticket.key, created_date, datetime.today().date()))
@@ -123,12 +127,13 @@ if __name__ == "__main__":
 
     print("Logging time...")
     projects = []
-    if len(projectNames) < 1:
-        jira_projects = jira.projects()
-        for proj in jira_projects:
-            projects.append(proj.key)
-    else:
-        projects = projectNames
+    projects.append('TEL')
+    # if len(projectNames) < 1:
+    #     jira_projects = jira.projects()
+    #     for proj in jira_projects:
+    #         projects.append(proj.key)
+    # else:
+    #     projects = projectNames
     tickets_assigned = LogTime(projects)
 
     if(len(tickets_assigned) < 1):
