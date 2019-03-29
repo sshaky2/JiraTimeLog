@@ -127,18 +127,18 @@ if __name__ == "__main__":
 
     print("Logging time...")
     projects = []
-    projects.append('TEL')
-    # if len(projectNames) < 1:
-    #     jira_projects = jira.projects()
-    #     for proj in jira_projects:
-    #         projects.append(proj.key)
-    # else:
-    #     projects = projectNames
+    if len(projectNames) < 1:
+        jira_projects = jira.projects()
+        for proj in jira_projects:
+            projects.append(proj.key)
+    else:
+        projects = projectNames
     tickets_assigned = LogTime(projects)
 
     if(len(tickets_assigned) < 1):
         print("No ticket found.")
         sys.exit(1)
+
 
     print('Tickets logged:')
 
